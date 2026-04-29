@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -18,6 +19,11 @@ import (
 )
 
 var requestIDCounter uint64
+
+const maxRequestBodySize = 10 * 1024 * 1024 // 10MB max request body
+
+// logContentEnabled controls whether prompt/response content is logged
+var logContentEnabled = os.Getenv("LOG_CONTENT") != "false"
 
 func nextRequestID() string {
 	id := atomic.AddUint64(&requestIDCounter, 1)
@@ -49,10 +55,15 @@ func (h *ProxyHandler) HandleProxy(c *gin.Context) {
 	reqID := nextRequestID()
 	startTime := time.Now()
 
-	// Read request body
-	bodyBytes, err := io.ReadAll(c.Request.Body)
+	// Read request body with size limit
+	limitedReader := io.LimitReader(c.Request.Body, maxRequestBodySize)
+	bodyBytes, err := io.ReadAll(limitedReader)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to read request body"})
+		return
+	}
+	if len(bodyBytes) >= maxRequestBodySize {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "request body too large (max 10MB)"})
 		return
 	}
 	c.Request.Body = io.NopCloser(bytes.NewReader(bodyBytes))
@@ -128,9 +139,13 @@ func (h *ProxyHandler) HandleProxy(c *gin.Context) {
 		errorType = "4xx"
 	}
 
-	// Extract previews (safely)
-	promptPreview := truncateStr(extractPromptPreview(bodyBytes), models.MaxLogPreviewLen)
-	responsePreview := truncateStr(extractResponsePreview(respBody), models.MaxLogPreviewLen)
+	// Extract previews (safely) — controlled by LOG_CONTENT env var
+	promptPreview := ""
+	responsePreview := ""
+	if logContentEnabled {
+		promptPreview = truncateStr(extractPromptPreview(bodyBytes), models.MaxLogPreviewLen)
+		responsePreview = truncateStr(extractResponsePreview(respBody), models.MaxLogPreviewLen)
+	}
 
 	// Save to DB
 	proxyLog := &models.ProxyLog{

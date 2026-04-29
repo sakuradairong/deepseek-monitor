@@ -239,12 +239,26 @@ func CountUsers() (int64, error) {
 // ==================== API KEY ====================
 
 func CreateAPIKey(key *models.APIKey) error {
+	encrypted, err := Encrypt(key.KeyValue)
+	if err != nil {
+		return err
+	}
+	key.KeyValue = encrypted
 	return DB.Create(key).Error
 }
 
 func GetAPIKeyByID(id uint) (*models.APIKey, error) {
 	var key models.APIKey
 	err := DB.First(&key, id).Error
+	if err != nil {
+		return nil, err
+	}
+	// Decrypt key value
+	decrypted, err := Decrypt(key.KeyValue)
+	if err != nil {
+		return nil, err
+	}
+	key.KeyValue = decrypted
 	return &key, err
 }
 
@@ -292,6 +306,12 @@ func SelectNextAPIKey() (*models.APIKey, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Decrypt key value for use
+	decrypted, err := Decrypt(key.KeyValue)
+	if err != nil {
+		return nil, err
+	}
+	key.KeyValue = decrypted
 	return &key, nil
 }
 

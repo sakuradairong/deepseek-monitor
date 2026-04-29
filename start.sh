@@ -34,6 +34,17 @@ if [ -z "$DEEPSEEK_API_KEY" ]; then
 fi
 export DEEPSEEK_API_KEY
 
+# Require JWT_SECRET
+if [ -z "$JWT_SECRET" ]; then
+  echo ""
+  echo -e "${YELLOW}⚠ JWT_SECRET not set. Generating one...${NC}"
+  export JWT_SECRET=$(openssl rand -base64 32 2>/dev/null || head -c 32 /dev/urandom | base64)
+  echo -e "  JWT_SECRET=$JWT_SECRET"
+  echo -e "  ${YELLOW}Save this for production! Set JWT_SECRET env var to reuse across restarts.${NC}"
+  echo ""
+fi
+export JWT_SECRET
+
 mkdir -p "$BACKEND_DIR/data"
 
 echo ""

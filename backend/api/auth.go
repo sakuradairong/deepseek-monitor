@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -14,7 +15,12 @@ var jwtSecret []byte
 func init() {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		secret = "deepseek-monitor-secret-change-in-production"
+		log.Fatal(`[SECURITY] JWT_SECRET environment variable is required.
+Set a strong random secret:
+  export JWT_SECRET=$(openssl rand -base64 32)
+Or add it to config.yaml or .env file.
+
+WARNING: Using the default secret is INSECURE. Anyone who knows it can forge tokens.`)
 	}
 	jwtSecret = []byte(secret)
 }
@@ -32,8 +38,9 @@ func GenerateToken(userID uint, username, role string) (string, error) {
 		Username: username,
 		Role:     role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(72 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),  // Reduced from 72h to 24h
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
 			Issuer:    "deepseek-monitor",
 		},
 	}
@@ -70,7 +77,6 @@ func AuthRequired() gin.HandlerFunc {
 			return
 		}
 
-		// Expect "Bearer <token>"
 		var tokenStr string
 		if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
 			tokenStr = authHeader[7:]
@@ -84,7 +90,6 @@ func AuthRequired() gin.HandlerFunc {
 			return
 		}
 
-		// Store user info in context
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("role", claims.Role)
@@ -92,7 +97,6 @@ func AuthRequired() gin.HandlerFunc {
 	}
 }
 
-// GetUserID extracts user ID from context set by AuthRequired
 func GetUserID(c *gin.Context) uint {
 	id, _ := c.Get("user_id")
 	if uid, ok := id.(uint); ok {

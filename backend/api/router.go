@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -13,11 +14,30 @@ import (
 func SetupRouter(handler *Handler, webDist string) *gin.Engine {
 	r := gin.Default()
 
+	// Security headers middleware
+	r.Use(func(c *gin.Context) {
+		c.Header("X-Content-Type-Options", "nosniff")
+		c.Header("X-Frame-Options", "DENY")
+		c.Header("X-XSS-Protection", "1; mode=block")
+		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
+		c.Header("Content-Security-Policy",
+			"default-src 'self'; "+
+				"script-src 'self' 'unsafe-inline' 'unsafe-eval'; "+
+				"style-src 'self' 'unsafe-inline'; "+
+				"img-src 'self' data: blob:; "+
+				"font-src 'self' data:; "+
+				"connect-src 'self'; "+
+				"frame-ancestors 'none'")
+		c.Next()
+	})
+	log.Println("[security] security headers middleware registered")
+
+	// CORS — restrict origins in production
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
-		AllowCredentials: true,
+		AllowCredentials: false, // Changed from true — incompatible with wildcard origins
 	}))
 
 	// Initialize sub-handlers
@@ -27,13 +47,12 @@ func SetupRouter(handler *Handler, webDist string) *gin.Engine {
 	proxyHandler := NewProxyHandler("logs/api_calls.log")
 
 	// === PUBLIC ROUTES ===
-	r.POST("/api/v1/auth/login", authHandler.Login)
+	r.POST("/api/v1/auth/login", LoginRateLimit(), authHandler.Login)
 	r.POST("/api/v1/auth/register", authHandler.Register)
 	r.GET("/api/v1/health", handler.Health)
 
-	// Proxy endpoint (OpenAI-compatible, no auth required)
-	// Must handle POST /v1/chat/completions and potentially other v1 paths
-	r.Any("/v1/*path", proxyHandler.HandleProxy)
+	// Proxy endpoint — with rate limiting
+	r.Any("/v1/*path", ProxyRateLimit(), proxyHandler.HandleProxy)
 
 	// === AUTHENTICATED ROUTES ===
 	auth := r.Group("/api/v1")
@@ -76,9 +95,9 @@ func SetupRouter(handler *Handler, webDist string) *gin.Engine {
 		r.NoRoute(func(c *gin.Context) {
 			if strings.HasPrefix(c.Request.URL.Path, "/api/") {
 				c.Status(http.StatusNotFound)
-				return
+			} else {
+				c.String(http.StatusOK, "DeepSeek API Monitor — Frontend not built")
 			}
-			c.String(http.StatusOK, "DeepSeek API Monitor - Frontend not built. Run `npm run build` in frontend/")
 		})
 	}
 
@@ -100,7 +119,6 @@ func serveFrontend(r *gin.Engine, distDir string) {
 
 	r.NoRoute(func(c *gin.Context) {
 		path := c.Request.URL.Path
-		// Don't intercept API or proxy paths
 		if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/v1/") {
 			c.Status(http.StatusNotFound)
 			return
