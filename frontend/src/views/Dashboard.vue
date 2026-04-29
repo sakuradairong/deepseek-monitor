@@ -25,7 +25,7 @@
             <div class="card-info">
               <div class="card-label">账户余额</div>
               <div class="card-value" :class="balanceStatus">
-                ${{ currentBalance }}
+                ¥{{ currentBalance }}
               </div>
               <div class="card-sub">总额度</div>
             </div>
@@ -54,8 +54,8 @@
             </div>
             <div class="card-info">
               <div class="card-label">本月费用</div>
-              <div class="card-value">${{ monthCost }}</div>
-              <div class="card-sub">今日: ${{ todayCost }}</div>
+              <div class="card-value">¥{{ monthCost }}</div>
+              <div class="card-sub">今日: ¥{{ todayCost }}</div>
             </div>
           </div>
         </el-card>

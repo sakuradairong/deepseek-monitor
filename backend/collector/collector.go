@@ -10,18 +10,22 @@ import (
 	"time"
 )
 
-// DeepSeekPricing holds model pricing per 1M tokens (in USD)
-// Based on https://api-docs.deepseek.com/quick_start/pricing
+// DeepSeekPricing holds model pricing per 1M tokens (in CNY/元)
+// Official pricing from https://api-docs.deepseek.com/quick_start/pricing
+// USD reference: ~7.2 CNY/USD (2025 rate)
 var DeepSeekPricing = map[string]struct {
-	Input     float64 // per 1M input tokens
+	Input     float64 // per 1M input tokens (cache miss)
 	Output    float64 // per 1M output tokens
 	CacheHit  float64 // per 1M cached input tokens
 	CacheMiss float64 // per 1M uncached input tokens
 }{
-	"deepseek-v4-flash":   {Input: 0.15, Output: 0.60, CacheHit: 0.015, CacheMiss: 0.15},
-	"deepseek-v4-pro":       {Input: 0.40, Output: 1.60, CacheHit: 0.04, CacheMiss: 0.40},
-	"deepseek-chat":         {Input: 0.27, Output: 1.10, CacheHit: 0.027, CacheMiss: 0.27},
-	"deepseek-reasoner":     {Input: 0.55, Output: 2.19, CacheHit: 0.055, CacheMiss: 0.55},
+	// deepseek-v4-flash: cache hit 0.02元, cache miss 1元, output 2元
+	"deepseek-v4-flash":   {Input: 1.0, Output: 2.0, CacheHit: 0.02, CacheMiss: 1.0},
+	// deepseek-v4-pro: cache hit 0.025元(2.5折), cache miss 3元, output 6元
+	"deepseek-v4-pro":       {Input: 3.0, Output: 6.0, CacheHit: 0.025, CacheMiss: 3.0},
+	// Deprecated models — keep old pricing as fallback
+	"deepseek-chat":         {Input: 1.0, Output: 2.0, CacheHit: 0.02, CacheMiss: 1.0},
+	"deepseek-reasoner":     {Input: 1.0, Output: 2.0, CacheHit: 0.02, CacheMiss: 1.0},
 }
 
 func GetPricing(model string) (input, output, cacheHit, cacheMiss float64) {

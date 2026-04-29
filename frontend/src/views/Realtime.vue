@@ -32,8 +32,8 @@
       </el-col>
       <el-col :xs="12" :md="6">
         <el-card shadow="hover" class="rt-card">
-          <div class="rt-value">${{ formattedCost }}</div>
-          <div class="rt-label">窗口内费用 (60s)</div>
+          <div class="rt-value">¥{{ formattedCost }}</div>
+          <div class="rt-label">窗口内费用 (¥ 60s)</div>
           <div class="rt-sub">{{ metrics.total_tokens }} tokens</div>
         </el-card>
       </el-col>

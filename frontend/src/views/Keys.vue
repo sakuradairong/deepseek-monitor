@@ -53,7 +53,7 @@
 
     <!-- Test Result Dialog -->
     <el-dialog v-model="testResult.show" title="Key 测试结果" width="400px">
-      <el-result v-if="testResult.success" icon="success" title="Key 有效" :sub-title="`余额: $${testResult.balance}`">
+      <el-result v-if="testResult.success" icon="success" title="Key 有效" :sub-title="`余额: ¥${testResult.balance}`">
         <template #extra>
           <el-tag type="success">可用</el-tag>
         </template>

@@ -27,7 +27,7 @@
               </div>
             </el-form-item>
 
-            <el-form-item label="余额告警阈值 ($)">
+            <el-form-item label="余额告警阈值 (¥)">
               <el-input-number v-model="settings['alert.balance_threshold']" :min="0.1" :max="1000" :step="0.5" :precision="1" style="width:100%" />
               <div style="font-size:12px;color:#8c8c8c;margin-top:4px">
                 余额低于此值时仪表盘会显示警告
