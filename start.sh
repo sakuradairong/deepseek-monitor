@@ -63,8 +63,10 @@ echo -e "  ${GREEN}✓${NC} Backend built"
 echo ""
 echo -e "${YELLOW}[2/3]${NC} Building frontend..."
 cd "$FRONTEND_DIR"
-npm install --silent 2>/dev/null
-npm run build 2>&1 | tail -1
+echo "  Installing npm dependencies..."
+npm install 2>&1 | tail -3
+echo "  Building with Vite..."
+npm run build 2>&1
 echo -e "  ${GREEN}✓${NC} Frontend built"
 
 echo ""
