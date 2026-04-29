@@ -9,6 +9,8 @@ database:
 
 deepseek:
   base_url: https://api.deepseek.com
+  # API Key is managed via the Web UI (Settings > API Keys).
+  # Set DEEPSEEK_API_KEY env var for the initial setup.
   api_key: ""
 
 monitor:
