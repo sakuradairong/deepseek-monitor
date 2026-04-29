@@ -26,3 +26,6 @@ Thumbs.db
 # Env
 .env
 *.local
+
+# Local config (contains secrets)
+backend/config.yaml
