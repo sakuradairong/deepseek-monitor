@@ -19,9 +19,16 @@ if [ -x /usr/local/go/bin/go ]; then
   export PATH="/usr/local/go/bin:$PATH"
 fi
 
+# Use the right Node.js (prefer /root/.local/bin/node)
+if [ -x /root/.local/bin/node ]; then
+  export PATH="/root/.local/bin:$PATH"
+fi
+
 command -v go >/dev/null 2>&1 || { echo "Error: Go is required (go version 1.22+). Install from https://go.dev/dl/"; exit 1; }
-GO_VERSION=$(go version | grep -oP 'go\K[0-9]+\.[0-9]+' | head -1)
 echo "  Go version: $(go version)"
+
+command -v node >/dev/null 2>&1 || { echo "Error: Node.js is required (version 18+). Install from https://nodejs.org/"; exit 1; }
+echo "  Node version: $(node --version)"
 
 # Check API key
 if [ -z "$DEEPSEEK_API_KEY" ]; then
