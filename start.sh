@@ -14,7 +14,14 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 # Check dependencies
+# Use the right Go binary (prefer /usr/local/go/bin/go for 1.22+)
+if [ -x /usr/local/go/bin/go ]; then
+  export PATH="/usr/local/go/bin:$PATH"
+fi
+
 command -v go >/dev/null 2>&1 || { echo "Error: Go is required (go version 1.22+). Install from https://go.dev/dl/"; exit 1; }
+GO_VERSION=$(go version | grep -oP 'go\K[0-9]+\.[0-9]+' | head -1)
+echo "  Go version: $(go version)"
 
 # Check API key
 if [ -z "$DEEPSEEK_API_KEY" ]; then
