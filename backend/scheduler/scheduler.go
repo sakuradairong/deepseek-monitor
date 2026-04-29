@@ -49,8 +49,17 @@ func (s *Scheduler) Start() error {
 			log.Printf("[scheduler] daily summary error: %v", err)
 		}
 		retentionCutoff := time.Now().Add(-s.retention)
-		if err := database.DeleteOldData(retentionCutoff); err != nil {
-			log.Printf("[scheduler] cleanup error: %v", err)
+		if err := database.DeleteOldUsageRecords(retentionCutoff); err != nil {
+			log.Printf("[scheduler] usage cleanup error: %v", err)
+		}
+		if err := database.DeleteOldBalanceSnapshots(retentionCutoff); err != nil {
+			log.Printf("[scheduler] balance cleanup error: %v", err)
+		}
+		if err := database.DeleteOldRateLimitRecords(retentionCutoff); err != nil {
+			log.Printf("[scheduler] rate-limit cleanup error: %v", err)
+		}
+		if err := database.DeleteOldAPIErrorRecords(retentionCutoff); err != nil {
+			log.Printf("[scheduler] api-error cleanup error: %v", err)
 		}
 	}); err != nil {
 		return fmt.Errorf("add daily cron job: %w", err)

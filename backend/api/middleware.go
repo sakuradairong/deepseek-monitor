@@ -2,6 +2,7 @@ package api
 
 import (
 	"log"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -19,30 +20,9 @@ func LoggerMiddleware() gin.HandlerFunc {
 	}
 }
 
-// SecurityHeaders adds security-related HTTP headers
-func SecurityHeaders() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Next()
-
-		// Set headers after handler runs (ensures they make it to the response)
-		c.Header("X-Content-Type-Options", "nosniff")
-		c.Header("X-Frame-Options", "DENY")
-		c.Header("X-XSS-Protection", "1; mode=block")
-		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
-		c.Header("X-DNS-Prefetch-Control", "off")
-		c.Header("Content-Security-Policy",
-			"default-src 'self'; "+
-				"script-src 'self' 'unsafe-inline' 'unsafe-eval'; "+
-				"style-src 'self' 'unsafe-inline'; "+
-				"img-src 'self' data: blob:; "+
-				"font-src 'self' data:; "+
-				"connect-src 'self'; "+
-				"frame-ancestors 'none'")
-	}
-}
-
 // RateLimiter is a simple in-memory rate limiter per IP
 type RateLimiter struct {
+	mu        sync.Mutex
 	visits    map[string][]time.Time
 	limit     int
 	window    time.Duration
@@ -65,6 +45,9 @@ func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
 }
 
 func (rl *RateLimiter) cleanup() {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
 	cutoff := time.Now().Add(-rl.window)
 	for ip, times := range rl.visits {
 		var active []time.Time
@@ -82,6 +65,9 @@ func (rl *RateLimiter) cleanup() {
 }
 
 func (rl *RateLimiter) Allow(ip string) bool {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
 	now := time.Now()
 	cutoff := now.Add(-rl.window)
 

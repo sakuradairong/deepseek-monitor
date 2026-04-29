@@ -9,6 +9,7 @@ services:
       - "8080:8080"
     environment:
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - JWT_SECRET=${JWT_SECRET:-}
     volumes:
       - ./backend/data:/app/data
     restart: unless-stopped

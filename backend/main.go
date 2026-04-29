@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -45,7 +47,6 @@ func main() {
 	if err := database.Init(&cfg.Database); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-	defer database.Close()
 
 	// Ensure logs directory exists
 	os.MkdirAll("logs", 0755)
@@ -62,9 +63,14 @@ func main() {
 	}
 
 	retention := cfg.Monitor.RetentionDays
+	if retention <= 0 || retention > 365 {
+		retention = 90
+	}
 	if dbRetention := database.GetConfigWithDefault(models.ConfigRetentionDays, ""); dbRetention != "" {
-		if _, err := fmt.Sscanf(dbRetention, "%d", &retention); err == nil && retention <= 0 {
-			retention = 90
+		if _, err := fmt.Sscanf(dbRetention, "%d", &retention); err == nil {
+			if retention <= 0 || retention > 365 {
+				retention = 90
+			}
 		}
 	}
 
@@ -73,7 +79,6 @@ func main() {
 	if err := sched.Start(); err != nil {
 		log.Fatalf("Failed to start scheduler: %v", err)
 	}
-	defer sched.Stop()
 
 	// Setup HTTP server
 	handler := api.NewHandler()
@@ -86,17 +91,34 @@ func main() {
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	log.Printf("DeepSeek Monitor API starting on %s", addr)
 
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: router,
+	}
+
 	go func() {
-		if err := router.Run(addr); err != nil {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Failed to start server: %v", err)
 		}
 	}()
 
-	// Wait for shutdown
+	// Wait for shutdown signal, then gracefully shut down
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-quit
 	log.Printf("Received signal %v, shutting down...", sig)
+
+	sched.Stop()
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Server forced to shutdown: %v", err)
+	}
+
+	database.Close()
+	log.Println("Shutdown complete.")
 }
 
 func initDefaultSettings() {
@@ -107,7 +129,7 @@ func initDefaultSettings() {
 		models.ConfigErrorAlert:      "true",
 	}
 	for k, v := range defaults {
-		database.SetConfig(k, v)
+		database.SetConfigDefault(k, v)
 	}
 }
 

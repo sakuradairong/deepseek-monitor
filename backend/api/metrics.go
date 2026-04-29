@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 	"time"
 
@@ -154,7 +155,7 @@ func (m *MetricsTracker) GetMetrics() *AggregatedMetrics {
 	result.TokensPerSec = math.Round(float64(totalTokens)/windowSecs*100) / 100
 
 	// Sort latencies for percentiles
-	sortInt64s(latencies)
+	sort.Slice(latencies, func(i, j int) bool { return latencies[i] < latencies[j] })
 	if len(latencies) > 0 {
 		p95Idx := int(float64(len(latencies)) * 0.95)
 		p99Idx := int(float64(len(latencies)) * 0.99)
@@ -216,18 +217,6 @@ type secBucket struct {
 	latencySum int64
 	tokensSum  int64
 	errors     int
-}
-
-func sortInt64s(a []int64) {
-	if len(a) <= 1 {
-		return
-	}
-	// Simple insertion sort for small slices
-	for i := 1; i < len(a); i++ {
-		for j := i; j > 0 && a[j] < a[j-1]; j-- {
-			a[j], a[j-1] = a[j-1], a[j]
-		}
-	}
 }
 
 // Global metrics tracker

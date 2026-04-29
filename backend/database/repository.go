@@ -1,6 +1,7 @@
 package database
 
 import (
+	"errors"
 	"time"
 
 	"deepseek-monitor/models"
@@ -196,7 +197,7 @@ func GetRecentErrors(limit int) ([]models.APIErrorRecord, error) {
 
 // --- Cleanup ---
 
-func DeleteOldData(before time.Time) error {
+func DeleteOldUsageRecords(before time.Time) error {
 	return DB.Where("collected_at < ?", before).
 		Delete(&models.UsageRecord{}).Error
 }
@@ -204,6 +205,16 @@ func DeleteOldData(before time.Time) error {
 func DeleteOldBalanceSnapshots(before time.Time) error {
 	return DB.Where("collected_at < ?", before).
 		Delete(&models.BalanceSnapshot{}).Error
+}
+
+func DeleteOldRateLimitRecords(before time.Time) error {
+	return DB.Where("collected_at < ?", before).
+		Delete(&models.RateLimitRecord{}).Error
+}
+
+func DeleteOldAPIErrorRecords(before time.Time) error {
+	return DB.Where("collected_at < ?", before).
+		Delete(&models.APIErrorRecord{}).Error
 }
 
 // ==================== USER ====================
@@ -326,6 +337,24 @@ func GetConfig(key string) (string, error) {
 	return cfg.Value, nil
 }
 
+// SetConfigDefault sets a config value only if the key does not already exist
+func SetConfigDefault(key, value string) error {
+	var cfg models.SystemConfig
+	result := DB.Where("key = ?", key).First(&cfg)
+	if result.Error == nil {
+		// Already exists — do not overwrite
+		return nil
+	}
+	if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return result.Error
+	}
+	return DB.Create(&models.SystemConfig{
+		Key:   key,
+		Value: value,
+	}).Error
+}
+
+// SetConfig sets or overwrites a config value
 func SetConfig(key, value string) error {
 	var cfg models.SystemConfig
 	result := DB.Where("key = ?", key).First(&cfg)
