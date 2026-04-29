@@ -1,0 +1,20 @@
+server:
+  port: 8080
+  host: 0.0.0.0
+  base_url: http://localhost:8080
+
+database:
+  driver: sqlite
+  dsn: data/deepseek_monitor.db
+
+deepseek:
+  base_url: https://api.deepseek.com
+  api_key: ""
+
+monitor:
+  collect_interval: 5m
+  retention_days: 90
+
+log:
+  level: info
+  format: text

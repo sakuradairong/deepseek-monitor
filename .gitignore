@@ -1,0 +1,28 @@
+# Binaries
+backend/deepseek-monitor
+backend/deepseek-monitor.exe
+
+# Database
+backend/data/
+
+# Logs
+backend/logs/
+
+# Frontend build
+backend/web/dist/
+frontend/dist/
+frontend/node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+*.local
